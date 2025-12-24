@@ -23,27 +23,38 @@ export default function RunPage() {
   }
 
   return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <h2 style={{ margin: 0 }}>Run cleanup</h2>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <label>Start</label>
-        <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
-        <label>End</label>
-        <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
-        <button disabled={busy || !startDate || !endDate} onClick={run} style={{ padding: '8px 12px' }}>
-          {busy ? 'Running…' : 'Run agent'}
-        </button>
+    <div className="grid">
+      <div className="card">
+        <h2>Run a cleanup</h2>
+        <p className="muted" style={{ marginTop: 0 }}>
+          Pick a date window. The agent fetches conversations and messages, creates summaries, detects threads needing a response,
+          and drafts replies for approval.
+        </p>
+
+        <div className="row" style={{ marginTop: 10 }}>
+          <div className="field">
+            <label>Start date</label>
+            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+          </div>
+          <div className="field">
+            <label>End date</label>
+            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+          </div>
+          <button className="btn" disabled={busy || !startDate || !endDate} onClick={run}>
+            {busy ? 'Running…' : 'Run agent'}
+          </button>
+        </div>
+
+        <p className="muted" style={{ marginBottom: 0, marginTop: 12 }}>
+          Tip: start with a 1–3 day window to validate the integration.
+        </p>
       </div>
 
-      <p style={{ margin: 0, opacity: 0.8 }}>
-        Pulls conversations in the window, fetches messages, summarizes + drafts replies (pending approval).
-        Approved replies are sent via OpenPhone and moved to Done using <code>setInboxStatus=done</code>.
-      </p>
-
       {result && (
-        <pre style={{ background: '#f6f6f6', padding: 12, borderRadius: 8, overflowX: 'auto' }}>
-{JSON.stringify(result, null, 2)}
-        </pre>
+        <div className="card">
+          <h2>Run result</h2>
+          <pre className="pre">{JSON.stringify(result, null, 2)}</pre>
+        </div>
       )}
     </div>
   );

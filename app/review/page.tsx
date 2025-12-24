@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 type Draft = {
   id: string;
@@ -12,10 +12,20 @@ type Draft = {
   created_at: string;
 };
 
+function badgeClass(status: Draft['status']) {
+  return `badge ${status}`;
+}
+
 export default function ReviewPage() {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<'all' | Draft['status']>('pending');
+
+  const visible = useMemo(() => {
+    if (filter === 'all') return drafts;
+    return drafts.filter(d => d.status === filter);
+  }, [drafts, filter]);
 
   async function refresh() {
     setLoading(true);
@@ -44,39 +54,59 @@ export default function ReviewPage() {
   }
 
   return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <h2 style={{ margin: 0 }}>Draft replies</h2>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button onClick={refresh} style={{ padding: '8px 12px' }}>Refresh</button>
-        <button onClick={sendApproved} style={{ padding: '8px 12px' }}>Send all approved</button>
-      </div>
+    <div className="grid">
+      <div className="card">
+        <h2>Draft replies</h2>
+        <p className="muted" style={{ marginTop: 0 }}>
+          Approve drafts individually, then send all approved in one click. Nothing is sent without approval.
+        </p>
 
-      {loading && <p>Loading…</p>}
-      {error && <p style={{ color: 'crimson' }}>{error}</p>}
-      {!loading && drafts.length === 0 && <p>No drafts yet.</p>}
-
-      <div style={{ display: 'grid', gap: 12 }}>
-        {drafts.map(d => (
-          <div key={d.id} style={{ border: '1px solid #e5e5e5', borderRadius: 10, padding: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-              <div>
-                <div style={{ fontWeight: 700 }}>{d.phone}</div>
-                <div style={{ opacity: 0.7, fontSize: 12 }}>Conversation: {d.conversation_id}</div>
-                <div style={{ opacity: 0.7, fontSize: 12 }}>From phoneNumberId: {d.from_phone_number_id}</div>
-                <div style={{ opacity: 0.7, fontSize: 12 }}>Status: {d.status}</div>
-              </div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'start' }}>
-                <button disabled={d.status !== 'pending'} onClick={() => action('/api/approve', d.id)} style={{ padding: '6px 10px' }}>Approve</button>
-                <button disabled={d.status !== 'pending'} onClick={() => action('/api/reject', d.id)} style={{ padding: '6px 10px' }}>Reject</button>
-                <button disabled={d.status !== 'pending'} onClick={() => action('/api/rewrite', d.id)} style={{ padding: '6px 10px' }}>Rewrite</button>
-              </div>
-            </div>
-            <pre style={{ marginTop: 10, background: '#f6f6f6', padding: 10, borderRadius: 8, whiteSpace: 'pre-wrap' }}>
-{d.draft_text}
-            </pre>
+        <div className="row" style={{ justifyContent: 'space-between' }}>
+          <div className="row">
+            <button className="btn secondary" onClick={refresh}>Refresh</button>
+            <button className="btn success" onClick={sendApproved}>Send all approved</button>
           </div>
-        ))}
+
+          <div className="row" style={{ alignItems: 'center' }}>
+            <span className="badge">Filter</span>
+            <select value={filter} onChange={(e) => setFilter(e.target.value as any)}>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="sent">Sent</option>
+              <option value="all">All</option>
+            </select>
+          </div>
+        </div>
+
+        {loading && <p className="muted">Loading…</p>}
+        {error && <p style={{ color: 'var(--danger)' }}>{error}</p>}
+        {!loading && visible.length === 0 && <p className="muted">No drafts found for this filter.</p>}
       </div>
+
+      {visible.map(d => (
+        <div key={d.id} className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ fontWeight: 800, fontSize: 16 }}>{d.phone}</div>
+                <span className={badgeClass(d.status)}>{d.status.toUpperCase()}</span>
+              </div>
+              <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>Conversation: {d.conversation_id}</div>
+              <div className="muted" style={{ fontSize: 12 }}>From phoneNumberId: {d.from_phone_number_id}</div>
+            </div>
+
+            <div className="row" style={{ alignItems: 'start' }}>
+              <button className="btn success" disabled={d.status !== 'pending'} onClick={() => action('/api/approve', d.id)}>Approve</button>
+              <button className="btn danger" disabled={d.status !== 'pending'} onClick={() => action('/api/reject', d.id)}>Reject</button>
+              <button className="btn secondary" disabled={d.status !== 'pending'} onClick={() => action('/api/rewrite', d.id)}>Rewrite</button>
+            </div>
+          </div>
+
+          <hr className="sep" />
+          <pre className="pre">{d.draft_text}</pre>
+        </div>
+      ))}
     </div>
   );
 }
