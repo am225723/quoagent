@@ -9,7 +9,7 @@ export default function HistoryPage() {
 
   async function load() {
     setLoading(true);
-    const res = await fetch('/api/runs');
+    const res = await fetch('/api/runs', { cache: 'no-store' });
     const json = await res.json();
     setRuns(json.data ?? []);
     setLoading(false);

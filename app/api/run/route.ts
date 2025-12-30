@@ -5,7 +5,20 @@ import { runAgent } from '@/lib/agent';
 
 export async function POST(req: Request) {
   const { startDate, endDate, resumeRunId } = await req.json();
-  if (!startDate || !endDate) return NextResponse.json({ error: 'startDate and endDate required' }, { status: 400 });
-  const result = await runAgent({ startDate, endDate, resumeRunId });
-  return NextResponse.json({ ok: true, ...result });
+  if (!startDate || !endDate) {
+    const res = NextResponse.json({ error: 'startDate and endDate required' }, { status: 400 });
+    res.headers.set('Cache-Control', 'no-store, max-age=0');
+    return res;
+  }
+
+  try {
+    const result = await runAgent({ startDate, endDate, resumeRunId });
+    const res = NextResponse.json({ ok: true, ...result }, { status: 200 });
+    res.headers.set('Cache-Control', 'no-store, max-age=0');
+    return res;
+  } catch (e: any) {
+    const res = NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 500 });
+    res.headers.set('Cache-Control', 'no-store, max-age=0');
+    return res;
+  }
 }

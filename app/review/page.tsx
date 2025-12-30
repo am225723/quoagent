@@ -31,7 +31,7 @@ export default function ReviewPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/drafts');
+      const res = await fetch('/api/drafts', { cache: 'no-store' });
       const json = await res.json();
       setDrafts(json.data ?? []);
     } catch (e: any) {

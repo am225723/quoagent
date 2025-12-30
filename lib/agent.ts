@@ -21,86 +21,117 @@ export async function runAgent({ startDate, endDate, resumeRunId }: { startDate:
     const r = await sb.from('runs').select('*').eq('id', runId).single();
     checkpoint = r.data?.checkpoint ?? null;
   } else {
-    const created = await sb.from('runs').insert({ start_date: startDate, end_date: endDate, status: 'running', checkpoint: null }).select('id').single();
+    const created = await sb.from('runs')
+      .insert({ start_date: startDate, end_date: endDate, status: 'running', checkpoint: null })
+      .select('id')
+      .single();
     runId = created.data!.id;
   }
 
-  const convPage = await listConversations({
-    updatedAfter: startIso,
-    updatedBefore: endIso,
-    maxResults: Math.min(100, maxPerRun),
-    pageToken: checkpoint?.pageToken ?? null
-  });
-
   let processed = 0;
+  let errors: Array<{ conversationId?: string; step: string; message: string }> = [];
 
-  for (const convo of convPage.data ?? []) {
-    if (processed >= maxPerRun) break;
-    if (convo.deletedAt) continue;
-
-    const participant = convo.participants?.[0];
-    if (!participant) continue;
-
-    let pageToken: string | null = null;
-    const all: any[] = [];
-    while (true) {
-      const page = await listMessages({
-        phoneNumberId: convo.phoneNumberId,
-        participants: [participant],
-        createdAfter: startIso,
-        createdBefore: endIso,
-        pageToken
-      });
-      all.push(...(page.data ?? []));
-      if (!page.nextPageToken) break;
-      pageToken = page.nextPageToken;
-      if (all.length > 500) break;
-    }
-
-    const transcript = all
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-      .map(m => `[${m.createdAt}] ${m.direction === 'incoming' ? 'IN' : 'OUT'}: ${m.text}`)
-      .join('\n');
-
-    const s = await summarizeForCleanup(transcript || '(no messages in window)');
-    const explicit = s.explicitName ?? extractExplicitName(transcript);
-
-    if ((!convo.name || String(convo.name).toLowerCase().includes('unknown')) && explicit) {
-      try { await upsertContactNameExplicitOnly(participant, explicit); } catch {}
-    }
-
-    await sb.from('summaries').insert({
-      run_id: runId,
-      conversation_id: convo.id,
-      contact_name: convo.name ?? 'Unknown Contact',
-      phone: participant,
-      date_range: s.dateRange || `${startDate} → ${endDate}`,
-      summary: s.summary,
-      topics: Array.isArray(s.topics) ? s.topics : [],
-      needs_response: !!s.needsResponse
+  try {
+    const convPage = await listConversations({
+      updatedAfter: startIso,
+      updatedBefore: endIso,
+      maxResults: Math.min(100, maxPerRun),
+      pageToken: checkpoint?.pageToken ?? null
     });
 
-    if (s.needsResponse && s.draftReply) {
-      await sb.from('draft_replies').insert({
-        run_id: runId,
-        conversation_id: convo.id,
-        phone: participant,
-        from_phone_number_id: convo.phoneNumberId,
-        user_id: null,
-        draft_text: s.draftReply,
-        status: 'pending'
-      });
+    for (const convo of convPage.data ?? []) {
+      if (processed >= maxPerRun) break;
+      if (convo.deletedAt) continue;
+
+      const participant = convo.participants?.[0];
+      if (!participant) continue;
+
+      try {
+        // Fetch messages
+        let pageToken: string | null = null;
+        const all: any[] = [];
+        while (true) {
+          const page = await listMessages({
+            phoneNumberId: convo.phoneNumberId,
+            participants: [participant],
+            createdAfter: startIso,
+            createdBefore: endIso,
+            pageToken
+          });
+          all.push(...(page.data ?? []));
+          if (!page.nextPageToken) break;
+          pageToken = page.nextPageToken;
+          if (all.length > 500) break;
+        }
+
+        const transcript = all
+          .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+          .map(m => `[${m.createdAt}] ${m.direction === 'incoming' ? 'IN' : 'OUT'}: ${m.text}`)
+          .join('\n');
+
+        const s = await summarizeForCleanup(transcript || '(no messages in window)');
+        const explicit = s.explicitName ?? extractExplicitName(transcript);
+
+        if ((!convo.name || String(convo.name).toLowerCase().includes('unknown')) && explicit) {
+          try { await upsertContactNameExplicitOnly(participant, explicit); } catch {}
+        }
+
+        // Store summary
+        await sb.from('summaries').insert({
+          run_id: runId,
+          conversation_id: convo.id,
+          contact_name: convo.name ?? 'Unknown Contact',
+          phone: participant,
+          date_range: s.dateRange || `${startDate} → ${endDate}`,
+          summary: s.summary,
+          topics: Array.isArray(s.topics) ? s.topics : [],
+          needs_response: !!s.needsResponse
+        });
+
+        // Store draft if needed
+        if (s.needsResponse && s.draftReply) {
+          await sb.from('draft_replies').insert({
+            run_id: runId,
+            conversation_id: convo.id,
+            phone: participant,
+            from_phone_number_id: convo.phoneNumberId,
+            user_id: null,
+            draft_text: s.draftReply,
+            status: 'pending'
+          });
+        }
+
+        processed += 1;
+      } catch (e: any) {
+        errors.push({ conversationId: convo.id, step: 'conversation', message: e?.message ?? String(e) });
+      }
     }
 
-    processed += 1;
+    const newCheckpoint = {
+      pageToken: convPage.nextPageToken ?? null,
+      processed,
+      errors,
+      lastProcessedAt: new Date().toISOString()
+    };
+
+    const status = convPage.nextPageToken ? 'paused' : 'completed';
+    await sb.from('runs')
+      .update({ status, checkpoint: newCheckpoint, updated_at: new Date().toISOString() })
+      .eq('id', runId);
+
+    return { runId, processed, nextPageToken: convPage.nextPageToken ?? null, errorsCount: errors.length };
+  } catch (e: any) {
+    const failCheckpoint = {
+      pageToken: checkpoint?.pageToken ?? null,
+      processed,
+      errors: [...errors, { step: 'run', message: e?.message ?? String(e) }],
+      lastProcessedAt: new Date().toISOString()
+    };
+
+    await sb.from('runs')
+      .update({ status: 'failed', checkpoint: failCheckpoint, updated_at: new Date().toISOString() })
+      .eq('id', runId);
+
+    throw e;
   }
-
-  const newCheckpoint = { pageToken: convPage.nextPageToken ?? null, lastProcessedAt: new Date().toISOString() };
-  await sb.from('runs').update({
-    status: convPage.nextPageToken ? 'paused' : 'completed',
-    checkpoint: newCheckpoint,
-    updated_at: new Date().toISOString()
-  }).eq('id', runId);
-
-  return { runId, processed, nextPageToken: convPage.nextPageToken ?? null };
 }
