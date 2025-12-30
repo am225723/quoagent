@@ -15,3 +15,11 @@ git add .
 git commit -m "QuoAgent MVP"
 git push -u origin main
 ```
+
+
+## Optional: blocklist responses
+Set these environment variables to prevent drafting replies:
+- RESPONSE_BLOCKLIST_PHONES (comma-separated E.164)
+- RESPONSE_BLOCKLIST_PHRASES (comma-separated phrases)
+
+Also run the updated SQL in `supabase/schema.sql` to create the `suppressions` table and new columns.

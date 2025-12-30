@@ -44,3 +44,25 @@ create table if not exists contact_map (
   contact_id text not null,
   created_at timestamptz not null default now()
 );
+
+
+-- Suppressions: prevent auto-drafting/sending replies for certain conversations/phones/phrases
+create table if not exists suppressions (
+  id uuid primary key default gen_random_uuid(),
+  kind text not null check (kind in ('phone','conversation','phrase')),
+  value text not null,
+  reason text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists suppressions_kind_value_idx on suppressions(kind, value);
+
+-- Add helpful fields to summaries for better UI context
+alter table summaries add column if not exists suppress_response boolean not null default false;
+alter table summaries add column if not exists last_inbound text;
+alter table summaries add column if not exists last_outbound text;
+alter table summaries add column if not exists last_message_at timestamptz;
+alter table summaries add column if not exists needs_response_reason text;
+
+-- Track if a draft was suppressed
+alter table draft_replies add column if not exists suppressed boolean not null default false;
