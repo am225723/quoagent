@@ -44,3 +44,7 @@ export async function sendTextMessage(args: { content: string; from: string; to:
     setInboxStatus: args.setInboxStatus ?? undefined
   });
 }
+
+export async function getConversation(conversationId: string) {
+  return getJson(BASE + '/conversations/' + conversationId);
+}

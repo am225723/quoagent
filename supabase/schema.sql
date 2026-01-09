@@ -66,3 +66,12 @@ alter table summaries add column if not exists needs_response_reason text;
 
 -- Track if a draft was suppressed
 alter table draft_replies add column if not exists suppressed boolean not null default false;
+
+
+-- Resolved contacts: hides "needs response" until a newer inbound arrives
+create table if not exists resolved_contacts (
+  phone text primary key,
+  note text,
+  resolved_at timestamptz not null default now()
+);
+
