@@ -39,6 +39,26 @@ create table if not exists draft_replies (
   updated_at timestamptz not null default now()
 );
 
+do $$ begin
+  create type contact_update_status as enum ('pending','approved','denied');
+exception when duplicate_object then null;
+end $$;
+
+create table if not exists contact_update_suggestions (
+  id uuid primary key default gen_random_uuid(),
+  phone text not null,
+  inferred_name text not null,
+  source_message_id text,
+  rationale text,
+  status contact_update_status not null default 'pending',
+  reviewed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (phone, inferred_name, source_message_id)
+);
+
+create index if not exists contact_update_suggestions_status_idx on contact_update_suggestions(status);
+
 create table if not exists contact_map (
   phone text primary key,
   contact_id text not null,
@@ -74,4 +94,3 @@ create table if not exists resolved_contacts (
   note text,
   resolved_at timestamptz not null default now()
 );
-
