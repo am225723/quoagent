@@ -1,7 +1,6 @@
 import { listConversations, listMessages } from './openphone';
 import { summarizeForCleanup } from './perplexity';
-import { extractExplicitName } from './explicitName';
-import { upsertContactNameExplicitOnly } from './contacts';
+import { extractExplicitNameWithReason } from './explicitName';
 import { supabaseServer } from './supabaseServer';
 
 function isoStart(d: string) { return new Date(d + 'T00:00:00.000Z').toISOString(); }
@@ -121,14 +120,28 @@ export async function runAgent({ startDate, endDate, resumeRunId }: { startDate:
         const lastAt = (all.length ? all.map(m => m.createdAt).sort().slice(-1)[0] : null);
 
         const s = await summarizeForCleanup(transcript || '(no messages in window)');
-        const explicit = s.explicitName ?? extractExplicitName(transcript);
-
-        if ((!convo.name || String(convo.name).toLowerCase().includes('unknown')) && explicit) {
-          try { await upsertContactNameExplicitOnly(participant, explicit); } catch {}
-        }
+        const explicitMatch = extractExplicitNameWithReason(transcript);
+        const inferredName = (s.explicitName ?? explicitMatch?.name ?? null)?.trim() || null;
+        const inferredReason = s.explicitName
+          ? 'Name inferred from explicit mention in message'
+          : explicitMatch?.reason ?? null;
+        const isUnknown = !convo.name || String(convo.name).toLowerCase().includes('unknown');
 
         const needs = !!s.needsResponse && !suppressed;
         const needsReason = suppressed ? `Suppressed: ${suppressReason}` : (needs ? 'Inbound message appears to require a response' : 'No response needed');
+
+        if (isUnknown && inferredName) {
+          const existingContact = await sb.from('contact_map').select('contact_id').eq('phone', participant).maybeSingle();
+          if (!existingContact.data?.contact_id) {
+            await sb.from('contact_update_suggestions').upsert({
+              phone: participant,
+              inferred_name: inferredName,
+              source_message_id: lastIn?.id ?? null,
+              rationale: inferredReason ?? 'Name inferred from message text',
+              status: 'pending'
+            }, { onConflict: 'phone,inferred_name,source_message_id' });
+          }
+        }
 
         // Store summary (enhanced)
         await sb.from('summaries').insert({
