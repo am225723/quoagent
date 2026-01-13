@@ -23,6 +23,11 @@ export default function Home() {
             <p className="muted">See run status and checkpoints.</p>
             <a className="btn secondary" href="/history">View history</a>
           </div>
+          <div className="card" style={{ boxShadow: 'none' }}>
+            <h3>Transit</h3>
+            <p className="muted">Create a new transit record.</p>
+            <a className="btn" href="/transit">Start transit</a>
+          </div>
         </div>
       </div>
     </div>

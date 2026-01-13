@@ -21,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <a className="pill" href="/history">History</a>
               <a className="pill" href="/summaries">Summaries</a>
               <a className="pill" href="/settings">Settings</a>
+              <a className="pill" href="/transit">Transit</a>
             </nav>
           </div>
           {children}
