@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense } from "react";
 
 interface ScannedItem {
   tagId: string;
@@ -10,7 +9,7 @@ interface ScannedItem {
   time: string;
 }
 
-function ConfirmationContent() {
+export default function Confirmation() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const transitType = searchParams.get("type");
@@ -67,13 +66,5 @@ function ConfirmationContent() {
         </div>
       </div>
     </div>
-  );
-}
-
-export default function Confirmation() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <ConfirmationContent />
-    </Suspense>
   );
 }

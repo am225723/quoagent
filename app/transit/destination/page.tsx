@@ -1,9 +1,9 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, Suspense } from "react";
+import { useState } from "react";
 
-function SelectDestinationContent() {
+export default function SelectDestination() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const transitType = searchParams.get("type");
@@ -42,13 +42,5 @@ function SelectDestinationContent() {
         </div>
       </div>
     </div>
-  );
-}
-
-export default function SelectDestination() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <SelectDestinationContent />
-    </Suspense>
   );
 }

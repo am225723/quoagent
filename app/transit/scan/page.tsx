@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect } from "react";
 
 interface ScannedItem {
   tagId: string;
@@ -10,7 +10,7 @@ interface ScannedItem {
   time: string;
 }
 
-function ScanTransitContent() {
+export default function ScanTransit() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const transitType = searchParams.get("type");
@@ -84,13 +84,5 @@ function ScanTransitContent() {
         </div>
       </div>
     </div>
-  );
-}
-
-export default function ScanTransit() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <ScanTransitContent />
-    </Suspense>
   );
 }
