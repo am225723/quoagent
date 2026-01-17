@@ -4,6 +4,12 @@ import { NextResponse } from 'next/server';
 import { runAgent } from '@/lib/agent';
 
 export async function POST(req: Request) {
+  const cronSecret = process.env.CRON_SECRET;
+  const authHeader = req.headers.get('authorization');
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+    return new NextResponse('Unauthorized', { status: 401 });
+  }
+
   const { startDate, endDate, resumeRunId } = await req.json();
   if (!startDate || !endDate) {
     const res = NextResponse.json({ error: 'startDate and endDate required' }, { status: 400 });
