@@ -1,21 +1,12 @@
-
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTransit } from "../TransitContext";
-import { useEffect } from "react";
 
 export default function SelectTransitType() {
   const router = useRouter();
-  const { setTransitType, resetTransit } = useTransit();
-
-  useEffect(() => {
-    resetTransit();
-  }, []);
 
   const handleSelect = (type: string) => {
-    setTransitType(type);
-    router.push(`/transit/destination`);
+    router.push(`/transit/destination?type=${encodeURIComponent(type)}`);
   };
 
   return (
