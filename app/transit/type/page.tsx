@@ -1,21 +1,16 @@
-
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTransit } from "../TransitContext";
-import { useEffect } from "react";
 
 export default function SelectTransitType() {
   const router = useRouter();
-  const { setTransitType, resetTransit } = useTransit();
-
-  useEffect(() => {
-    resetTransit();
-  }, []);
 
   const handleSelect = (type: string) => {
-    setTransitType(type);
-    router.push(`/transit/destination`);
+    router.push(`/transit/destination?type=${encodeURIComponent(type)}`);
+  };
+
+  const handleBack = () => {
+    router.push("/");
   };
 
   return (
@@ -40,6 +35,12 @@ export default function SelectTransitType() {
             className="px-4 py-2 font-bold text-white bg-red-500 rounded hover:bg-red-700"
           >
             Dispose
+          </button>
+          <button
+            onClick={handleBack}
+            className="px-4 py-2 mt-4 font-semibold text-gray-700 bg-gray-200 rounded hover:bg-gray-300"
+          >
+            Back to Dashboard
           </button>
         </div>
       </div>
