@@ -68,7 +68,7 @@ export async function runAgent({ startDate, endDate, resumeRunId }: { startDate:
       try {
         // Fetch messages
         let pageToken: string | null = null;
-        const all: any[] = [];
+        const rawMessages: any[] = [];
         while (true) {
           const page = await listMessages({
             phoneNumberId: convo.phoneNumberId,
@@ -77,11 +77,17 @@ export async function runAgent({ startDate, endDate, resumeRunId }: { startDate:
             createdBefore: endIso,
             pageToken
           });
-          all.push(...(page.data ?? []));
+          rawMessages.push(...(page.data ?? []));
           if (!page.nextPageToken) break;
           pageToken = page.nextPageToken;
-          if (all.length > 500) break;
+          if (rawMessages.length > 500) break;
         }
+
+        const IGNORE_TEXT = "Thank you for reaching out to Dr. Zelisko's office. I am currently assisting another patient and want to provide you with the same focused attention. So we can best prepare to assist you, please reply with your name and a brief reason for your call. We will be in touch as soon as we are available.";
+        const all = rawMessages.filter(m => {
+          const t = (m.text || '').replace(/\s+/g, ' ').trim();
+          return t !== IGNORE_TEXT;
+        });
 
         const transcript = all
           .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
