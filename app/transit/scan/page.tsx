@@ -16,28 +16,35 @@ export default function ScanTransit() {
   const transitType = searchParams.get("type");
   const destination = searchParams.get("destination");
   const [scannedItems, setScannedItems] = useState<ScannedItem[]>([]);
+  const [isScanning, setIsScanning] = useState(true);
 
   // Mock scanning
   useEffect(() => {
-    const mockScan = () => {
-      const newItem: ScannedItem = {
-        tagId: `RFID-${Math.random().toString(36).substr(2, 9)}`,
-        state: "Scanned",
-        date: new Date().toLocaleDateString(),
-        time: new Date().toLocaleTimeString(),
+    let interval: NodeJS.Timeout;
+    if (isScanning) {
+      const mockScan = () => {
+        const newItem: ScannedItem = {
+          tagId: `RFID-${Math.random().toString(36).substr(2, 9)}`,
+          state: "Scanned",
+          date: new Date().toLocaleDateString(),
+          time: new Date().toLocaleTimeString(),
+        };
+        setScannedItems((prevItems) => [...prevItems, newItem]);
       };
-      setScannedItems((prevItems) => [...prevItems, newItem]);
-    };
-
-    const interval = setInterval(mockScan, 3000); // New item every 3 seconds
+      interval = setInterval(mockScan, 3000); // New item every 3 seconds
+    }
     return () => clearInterval(interval);
-  }, []);
+  }, [isScanning]);
 
   const handleConfirm = () => {
     const items = JSON.stringify(scannedItems);
     router.push(
       `/transit/confirmation?type=${transitType}&destination=${destination}&items=${items}`
     );
+  };
+
+  const handleBack = () => {
+    router.push(`/transit/destination?type=${transitType}`);
   };
 
   return (
@@ -74,7 +81,21 @@ export default function ScanTransit() {
             </tbody>
           </table>
         </div>
-        <div className="mt-4 text-center">
+        <div className="flex justify-between mt-4">
+           <button
+            onClick={handleBack}
+            className="px-4 py-2 font-semibold text-gray-700 bg-gray-200 rounded hover:bg-gray-300"
+          >
+            Back
+          </button>
+          <button
+            onClick={() => setIsScanning(!isScanning)}
+            className={`px-4 py-2 font-bold text-white rounded ${
+              isScanning ? "bg-yellow-500 hover:bg-yellow-700" : "bg-green-500 hover:bg-green-700"
+            }`}
+          >
+            {isScanning ? "Pause Scanning" : "Resume Scanning"}
+          </button>
           <button
             onClick={handleConfirm}
             className="px-4 py-2 font-bold text-white bg-blue-500 rounded hover:bg-blue-700"

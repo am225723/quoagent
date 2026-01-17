@@ -26,7 +26,7 @@ export default function Home() {
           <div className="card" style={{ boxShadow: 'none' }}>
             <h3>Transit</h3>
             <p className="muted">Create a new transit record.</p>
-            <a className="btn" href="/transit">Start transit</a>
+            <a className="btn" href="/transit/type">Start transit</a>
           </div>
         </div>
       </div>
