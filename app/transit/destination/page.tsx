@@ -15,6 +15,10 @@ export default function SelectDestination() {
     }
   };
 
+  const handleBack = () => {
+    router.push("/transit/type");
+  };
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
       <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-md">
@@ -32,13 +36,21 @@ export default function SelectDestination() {
             <option value="Warehouse B">Warehouse B</option>
             <option value="Retail Store 1">Retail Store 1</option>
           </select>
-          <button
-            onClick={handleNext}
-            disabled={!destination}
-            className="px-4 py-2 font-bold text-white bg-blue-500 rounded hover:bg-blue-700 disabled:bg-gray-400"
-          >
-            Next
-          </button>
+          <div className="flex space-x-4">
+            <button
+              onClick={handleBack}
+              className="w-1/2 px-4 py-2 font-semibold text-gray-700 bg-gray-200 rounded hover:bg-gray-300"
+            >
+              Back
+            </button>
+            <button
+              onClick={handleNext}
+              disabled={!destination}
+              className="w-1/2 px-4 py-2 font-bold text-white bg-blue-500 rounded hover:bg-blue-700 disabled:bg-gray-400"
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
     </div>

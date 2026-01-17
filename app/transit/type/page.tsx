@@ -9,6 +9,10 @@ export default function SelectTransitType() {
     router.push(`/transit/destination?type=${encodeURIComponent(type)}`);
   };
 
+  const handleBack = () => {
+    router.push("/");
+  };
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
       <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-md">
@@ -31,6 +35,12 @@ export default function SelectTransitType() {
             className="px-4 py-2 font-bold text-white bg-red-500 rounded hover:bg-red-700"
           >
             Dispose
+          </button>
+          <button
+            onClick={handleBack}
+            className="px-4 py-2 mt-4 font-semibold text-gray-700 bg-gray-200 rounded hover:bg-gray-300"
+          >
+            Back to Dashboard
           </button>
         </div>
       </div>
