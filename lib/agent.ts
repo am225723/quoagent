@@ -44,7 +44,10 @@ export async function runAgent({ startDate, endDate, resumeRunId }: { startDate:
       .insert({ start_date: startDate, end_date: endDate, status: 'running', checkpoint: null })
       .select('id')
       .single();
-    runId = created.data!.id;
+    if (created.error || !created.data) {
+      throw new Error(`Failed to create run: ${created.error?.message || 'No data returned'}`);
+    }
+    runId = created.data.id;
   }
 
   let processed = 0;
