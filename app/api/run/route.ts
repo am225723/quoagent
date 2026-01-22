@@ -5,7 +5,43 @@ import { runAgent } from '@/lib/agent';
 
 export async function POST(req: Request) {
   const authHeader = req.headers.get('Authorization');
-  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  let authorized = false;
+
+  // 1. Check Bearer Token (Cron)
+  if (process.env.CRON_SECRET && authHeader === `Bearer ${process.env.CRON_SECRET}`) {
+    authorized = true;
+  }
+
+  // 2. Check Basic Auth (Admin/UI)
+  if (!authorized && process.env.ADMIN_PASSWORD && authHeader?.startsWith('Basic ')) {
+    const authValue = authHeader.split(' ')[1];
+    if (authValue) {
+      try {
+        const decoded = atob(authValue);
+        const colonIndex = decoded.indexOf(':');
+
+        if (colonIndex !== -1) {
+          const password = decoded.slice(colonIndex + 1);
+          const expected = process.env.ADMIN_PASSWORD;
+
+          // Constant-time comparison
+          if (password.length === expected.length) {
+            let result = 0;
+            for (let i = 0; i < password.length; i++) {
+              result |= password.charCodeAt(i) ^ expected.charCodeAt(i);
+            }
+            if (result === 0) {
+              authorized = true;
+            }
+          }
+        }
+      } catch (e) {
+        // Invalid format
+      }
+    }
+  }
+
+  if (!authorized) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
