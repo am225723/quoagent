@@ -5,7 +5,19 @@ import { runAgent } from '@/lib/agent';
 
 export async function POST(req: Request) {
   const authHeader = req.headers.get('Authorization');
-  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const isCron = process.env.CRON_SECRET && authHeader === `Bearer ${process.env.CRON_SECRET}`;
+
+  let isAdmin = false;
+  if (authHeader?.startsWith('Basic ') && process.env.ADMIN_PASSWORD) {
+    try {
+      const creds = atob(authHeader.split(' ')[1]);
+      const pwd = creds.slice(creds.indexOf(':') + 1);
+      // Middleware performs constant-time check; this is a secondary safety net
+      if (pwd === process.env.ADMIN_PASSWORD) isAdmin = true;
+    } catch {}
+  }
+
+  if (!isCron && !isAdmin) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
