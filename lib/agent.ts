@@ -26,8 +26,16 @@ function shouldSuppressByEnv(phone: string, transcript: string) {
   return { suppress: false as const, reason: '' };
 }
 
-export async function runAgent({ startDate, endDate, resumeRunId }: { startDate: string; endDate: string; resumeRunId?: string | null; }) {
-  const sb = supabaseServer();
+export async function runAgent({ startDate, endDate, resumeRunId }: { startDate: string; endDate: string; resumeRunId?: string | null; },
+  deps: {
+    supabaseServer: typeof supabaseServer;
+    listConversations: typeof listConversations;
+    listMessages: typeof listMessages;
+    summarizeForCleanup: typeof summarizeForCleanup;
+  } = { supabaseServer, listConversations, listMessages, summarizeForCleanup }
+) {
+  const sb = deps.supabaseServer();
+  const { listConversations, listMessages, summarizeForCleanup } = deps;
   const maxPerRun = Number(process.env.MAX_CONVERSATIONS_PER_RUN ?? '25');
 
   const startIso = isoStart(startDate);
