@@ -15,3 +15,8 @@
 2.  Use middleware or a higher-order function to enforce auth on sensitive routes.
 3.  Never assume an endpoint is hidden or safe just because it's intended for cron jobs.
 >>>>>>> origin/sentinel-fix-run-auth-13580378670000090596
+
+## 2026-01-26 - Missing Middleware and Authentication
+**Vulnerability:** The critical `middleware.ts` file was missing, leaving sensitive endpoints like `/api/approve` and `/api/reject` completely unprotected, allowing unauthorized database modifications.
+**Learning:** Next.js App Router relies heavily on `middleware.ts` for global protection. Its absence is a silent failure if individual routes don't check auth. "Force-dynamic" routes do not imply security.
+**Prevention:** Always verify the existence of `middleware.ts` in CI/CD. Implement defense-in-depth by adding auth checks in critical route handlers even if middleware is present. Use shared libraries for security logic to avoid duplication.
