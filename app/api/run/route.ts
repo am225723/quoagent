@@ -2,10 +2,28 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { runAgent } from '@/lib/agent';
+import { secureCompare } from '@/lib/security';
 
 export async function POST(req: Request) {
   const authHeader = req.headers.get('Authorization');
-  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  let authorized = false;
+
+  if (process.env.CRON_SECRET && authHeader === `Bearer ${process.env.CRON_SECRET}`) {
+    authorized = true;
+  } else if (authHeader && authHeader.startsWith('Basic ')) {
+    try {
+      const credentials = atob(authHeader.split(' ')[1]);
+      const colonIndex = credentials.indexOf(':');
+      if (colonIndex !== -1) {
+        const password = credentials.slice(colonIndex + 1);
+        if (process.env.ADMIN_PASSWORD && secureCompare(password, process.env.ADMIN_PASSWORD)) {
+          authorized = true;
+        }
+      }
+    } catch (e) {}
+  }
+
+  if (!authorized) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
