@@ -3,6 +3,13 @@ import { summarizeForCleanup } from './perplexity';
 import { extractExplicitNameWithReason } from './explicitName';
 import { supabaseServer } from './supabaseServer';
 
+export interface AgentDeps {
+  supabaseServer: typeof supabaseServer;
+  listConversations: typeof listConversations;
+  listMessages: typeof listMessages;
+  summarizeForCleanup: typeof summarizeForCleanup;
+}
+
 function isoStart(d: string) { return new Date(d + 'T00:00:00.000Z').toISOString(); }
 function isoEnd(d: string) { return new Date(d + 'T23:59:59.999Z').toISOString(); }
 
@@ -26,8 +33,15 @@ function shouldSuppressByEnv(phone: string, transcript: string) {
   return { suppress: false as const, reason: '' };
 }
 
-export async function runAgent({ startDate, endDate, resumeRunId }: { startDate: string; endDate: string; resumeRunId?: string | null; }) {
-  const sb = supabaseServer();
+export async function runAgent({ startDate, endDate, resumeRunId, deps }: { startDate: string; endDate: string; resumeRunId?: string | null; deps?: AgentDeps }) {
+  const { supabaseServer: getSb, listConversations: listConvos, listMessages: listMsgs, summarizeForCleanup: summarize } = deps ?? {
+    supabaseServer,
+    listConversations,
+    listMessages,
+    summarizeForCleanup
+  };
+
+  const sb = getSb();
   const maxPerRun = Number(process.env.MAX_CONVERSATIONS_PER_RUN ?? '25');
 
   const startIso = isoStart(startDate);
@@ -51,7 +65,7 @@ export async function runAgent({ startDate, endDate, resumeRunId }: { startDate:
   let errors: Array<{ conversationId?: string; step: string; message: string }> = [];
 
   try {
-    const convPage = await listConversations({
+    const convPage = await listConvos({
       updatedAfter: startIso,
       updatedBefore: endIso,
       maxResults: Math.min(100, maxPerRun),
@@ -70,7 +84,7 @@ export async function runAgent({ startDate, endDate, resumeRunId }: { startDate:
         let pageToken: string | null = null;
         const rawMessages: any[] = [];
         while (true) {
-          const page = await listMessages({
+          const page = await listMsgs({
             phoneNumberId: convo.phoneNumberId,
             participants: [participant],
             createdAfter: startIso,
@@ -125,7 +139,7 @@ export async function runAgent({ startDate, endDate, resumeRunId }: { startDate:
         const lastOut = pickLast(all, 'outgoing');
         const lastAt = (all.length ? all.map(m => m.createdAt).sort().slice(-1)[0] : null);
 
-        const s = await summarizeForCleanup(transcript || '(no messages in window)');
+        const s = await summarize(transcript || '(no messages in window)');
         const explicitMatch = extractExplicitNameWithReason(transcript);
         const inferredName = (s.explicitName ?? explicitMatch?.name ?? null)?.trim() || null;
         const inferredReason = s.explicitName
