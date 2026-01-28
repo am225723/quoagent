@@ -15,3 +15,8 @@
 2.  Use middleware or a higher-order function to enforce auth on sensitive routes.
 3.  Never assume an endpoint is hidden or safe just because it's intended for cron jobs.
 >>>>>>> origin/sentinel-fix-run-auth-13580378670000090596
+
+## 2025-06-03 - Implicit Middleware Dependency
+**Vulnerability:** Critical endpoints were unprotected because the project relied on a missing `middleware.ts` for authentication.
+**Learning:** Security infrastructure (like middleware) must be treated as code-critical. If it's missing, the app should fail to start or default to secure (fail closed).
+**Prevention:** Add CI checks to ensure `middleware.ts` exists. Consider creating a "security-manifest" that validates the presence of required security files on build.
