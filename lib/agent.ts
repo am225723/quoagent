@@ -26,8 +26,19 @@ function shouldSuppressByEnv(phone: string, transcript: string) {
   return { suppress: false as const, reason: '' };
 }
 
-export async function runAgent({ startDate, endDate, resumeRunId }: { startDate: string; endDate: string; resumeRunId?: string | null; }) {
-  const sb = supabaseServer();
+export interface AgentDeps {
+  supabase?: any;
+  listConversations?: typeof listConversations;
+  listMessages?: typeof listMessages;
+  summarizeForCleanup?: typeof summarizeForCleanup;
+}
+
+export async function runAgent({ startDate, endDate, resumeRunId, deps }: { startDate: string; endDate: string; resumeRunId?: string | null; deps?: AgentDeps }) {
+  const sb = deps?.supabase ?? supabaseServer();
+  const _listConversations = deps?.listConversations ?? listConversations;
+  const _listMessages = deps?.listMessages ?? listMessages;
+  const _summarizeForCleanup = deps?.summarizeForCleanup ?? summarizeForCleanup;
+
   const maxPerRun = Number(process.env.MAX_CONVERSATIONS_PER_RUN ?? '25');
 
   const startIso = isoStart(startDate);
@@ -51,7 +62,7 @@ export async function runAgent({ startDate, endDate, resumeRunId }: { startDate:
   let errors: Array<{ conversationId?: string; step: string; message: string }> = [];
 
   try {
-    const convPage = await listConversations({
+    const convPage = await _listConversations({
       updatedAfter: startIso,
       updatedBefore: endIso,
       maxResults: Math.min(100, maxPerRun),
@@ -70,7 +81,7 @@ export async function runAgent({ startDate, endDate, resumeRunId }: { startDate:
         let pageToken: string | null = null;
         const rawMessages: any[] = [];
         while (true) {
-          const page = await listMessages({
+          const page = await _listMessages({
             phoneNumberId: convo.phoneNumberId,
             participants: [participant],
             createdAfter: startIso,
@@ -125,7 +136,7 @@ export async function runAgent({ startDate, endDate, resumeRunId }: { startDate:
         const lastOut = pickLast(all, 'outgoing');
         const lastAt = (all.length ? all.map(m => m.createdAt).sort().slice(-1)[0] : null);
 
-        const s = await summarizeForCleanup(transcript || '(no messages in window)');
+        const s = await _summarizeForCleanup(transcript || '(no messages in window)');
         const explicitMatch = extractExplicitNameWithReason(transcript);
         const inferredName = (s.explicitName ?? explicitMatch?.name ?? null)?.trim() || null;
         const inferredReason = s.explicitName
