@@ -14,4 +14,9 @@
 1.  All API routes must start with an authentication/authorization check.
 2.  Use middleware or a higher-order function to enforce auth on sensitive routes.
 3.  Never assume an endpoint is hidden or safe just because it's intended for cron jobs.
+
+## 2025-02-17 - Missing Global Middleware Protection
+**Vulnerability:** The `middleware.ts` file was missing entirely, leaving all API endpoints (except `/api/run`) publicly accessible, despite memory indicating otherwise.
+**Learning:** Do not assume security infrastructure exists based on documentation or memory. Always verify the presence of critical security files (`middleware.ts`, `security.ts`) during scans.
+**Prevention:** Add a CI/CD check or a pre-commit hook that verifies the existence of `middleware.ts` and ensures it has a non-empty matcher configuration.
 >>>>>>> origin/sentinel-fix-run-auth-13580378670000090596
